@@ -7,19 +7,11 @@ var view = {
 	},
 	displayMiss: function(location) {
 		var cell = document.getElementById(location);
-		if(cell) {
-			cell.setAttribute("class", "miss");
-		} else {
-			console.log('Произошла ошибка!');
-		}
+		cell.setAttribute("class", "miss");
 	},
 	displayHit: function(location) {
 		var cell = document.getElementById(location);
-		if(cell) {
-			cell.setAttribute("class", "hit");
-		} else {
-			console.log('Произошла ошибка!');
-		}
+		cell.setAttribute("class", "hit");
 	}
 };
 
@@ -29,9 +21,9 @@ var model = {
 	shipLength: 3,
 	shipSunk: 0,
 	ships: [
-		{ locations: ["06", "16", "26"], hits: ["", "", ""] },
-		{ locations: ["24", "34", "44"], hits: ["", "", ""] },
-		{ locations: ["10", "11", "12"], hits: ["", "", ""] }
+		{ locations: ["0", "0", "0"], hits: ["", "", ""] },
+		{ locations: ["0", "0", "0"], hits: ["", "", ""] },
+		{ locations: ["0", "0", "0"], hits: ["", "", ""] }
 	],
 	fire: function(guess) {
 		for (var i = 0; i < this.numShips; i++) {
@@ -57,13 +49,60 @@ var model = {
 		return false;
 	},
 	isSunk: function(ship) {
-		for (var i = 0; i < this.numShips.length; i++) {
+		for (var i = 0; i < this.shipLength; i++) {
 			if(ship.hits[i] !== "hit") {
 				return false;
 			}
 		}
 		return true;
+	},
+	generateShipLocations: function() {
+		var locations;
+		for(var i = 0; i < this.numShips; i++) {
+			do {
+				locations = this.generateShip();
+			} while (this.collision(locations)) {
+				this.ships[i].locations = locations;
+			}
+		}
+	},
+	generateShip: function() {
+		var direction = Math.floor(Math.random() * 2);
+		var row, col;
+
+		if(direction === 1) {
+			row = Math.floor(Math.random() * this.boardSize);
+			col = Math.floor(Math.random() * (this.boardSize - this.shipLength));
+		} else {
+			row = Math.floor(Math.random() * (this.boardSize - this.shipLength));
+			col = Math.floor(Math.random() * this.boardSize);
+		}
+
+		var newShipLocations = [];
+
+		for (var i = 0; i < this.shipLength; i++) {
+			if(direction === 1) {
+				newShipLocations.push(row + "" + (col + i));
+			} else {
+				newShipLocations.push((row + i) + "" + col);
+			}
+		}
+
+		return newShipLocations;
+	},
+	collision: function(locations) {
+		for (var i = 0; i < this.numShips; i++) {
+			var ship = model.ships[i];
+
+			for (var j = 0; j < locations.length; j++) {
+				if(ship.locations.indexOf(locations[j]) >= 0) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
+
 };
 
 var controller = {
@@ -78,6 +117,7 @@ var controller = {
 			if(hit && model.shipSunk === model.numShips) {
 				view.displayMessage("Все корабли потоплены за " + this.guesses + " попыток");
 			}
+			//console.log(model.shipSunk + ' | ' + model.numShips);
 		}
 	}
 };
@@ -86,16 +126,16 @@ function parseGuess(guess) {
 	var alphabet = ["A", "B", "C", "D", "E", "F", "G"];
 
 	if(guess === null || guess.length !== 2) {
-		console.log("Неверный формат ввода!");
+		view.displayMessage("Неверный формат ввода!");
 	} else {
 		var firstChar = guess.charAt(0);
 		var row = alphabet.indexOf(firstChar);
 		var column = guess.charAt(1);
 
 		if(isNaN(row) || isNaN(column)) {
-			console.log("Неверный формат ввода!");
+			view.displayMessage("Неверный формат ввода!");
 		} else if(row < 0 || row >= model.boardSize || column < 0 || column >= model.boardSize) {
-			console.log("В молоко!");
+			view.displayMessage("В молоко!");
 		} else {
 			return row + column;
 		}
@@ -105,13 +145,30 @@ function parseGuess(guess) {
 
 }
 
-controller.processGuess("A0");
-controller.processGuess("A6");
-controller.processGuess("B6");
-controller.processGuess("C6");
-controller.processGuess("C4");
-controller.processGuess("D4");
-controller.processGuess("E4");
-controller.processGuess("B0");
-controller.processGuess("B1");
-controller.processGuess("B2");
+function init() {
+	var fireButton = document.getElementById('fireButton');
+	fireButton.onclick = handleFireButton;
+	var guessInput = document.getElementById("guessInput");
+	guessInput.onkeypress = handleKeyPress;
+
+	model.generateShipLocations();
+}
+
+function handleFireButton() {
+	var guessInput = document.getElementById('guessInput');
+	var guess = guessInput.value.toUpperCase();
+
+	controller.processGuess(guess);
+
+	guessInput.value = '';
+}
+
+function handleKeyPress(e) {
+	var fireButton = document.getElementById("fireButton");
+	if (e.keyCode === 13) {
+		fireButton.click();
+		return false;
+	}
+}
+
+window.onload = init;
