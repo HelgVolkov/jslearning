@@ -24,4 +24,4 @@ function validate(phoneNumber) {
  	console.log('ok');
 }
 
-validate('1234567');
+validate('123-4567');
